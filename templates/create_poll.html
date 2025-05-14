@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- Добавьте Sortable.js -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <div class="poll-editor">
     <h2>Создание нового опроса</h2>
     <form method="POST">
@@ -11,6 +14,7 @@
         <div id="questions-container">
             <div class="question-card">
                 <div class="question-header">
+                    <button type="button" class="delete-btn" onclick="removeQuestion(this)">×</button>
                     <textarea name="question[]" placeholder="Текст вопроса" required></textarea>
                     <select name="type[]">
                         <option value="text">Текстовый вопрос</option>
@@ -31,10 +35,12 @@
 </div>
 
 <script>
+// Добавление вопроса
 function addQuestion() {
     const newQuestion = `
     <div class="question-card">
         <div class="question-header">
+            <button type="button" class="delete-btn" onclick="removeQuestion(this)">×</button>
             <textarea name="question[]" placeholder="Текст вопроса" required></textarea>
             <select name="type[]">
                 <option value="text">Текстовый вопрос</option>
@@ -50,7 +56,22 @@ function addQuestion() {
     document.getElementById('questions-container').insertAdjacentHTML('beforeend', newQuestion);
 }
 
-// Обработчик изменений типа вопроса
+// Удаление вопроса
+function removeQuestion(button) {
+    const questionCard = button.closest('.question-card');
+    questionCard.remove();
+}
+
+// Drag and Drop
+document.addEventListener('DOMContentLoaded', function() {
+    new Sortable(document.getElementById('questions-container'), {
+        animation: 150,
+        handle: '.question-card',
+        ghostClass: 'dragging-ghost'
+    });
+});
+
+// Обработчик изменений типа вопроса (делегирование событий)
 document.getElementById('questions-container').addEventListener('change', function(e) {
     if (e.target.matches('select[name="type[]"]')) {
         const questionCard = e.target.closest('.question-card');

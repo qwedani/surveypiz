@@ -1,14 +1,14 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from openpyxl import Workbook
 from sqlalchemy import func
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
+from io import BytesIO,StringIO
 import csv
-from io import BytesIO
+from openpyxl import Workbook
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -107,7 +107,7 @@ def register():
         password = request.form['password']
 
         if User.query.filter_by(username=username).first():
-            flash('Username already exists', 'error')
+            flash('Пользователь с таким именнем уже зарегистрирован')
             return redirect(url_for('register'))
 
         user = User(username=username)
@@ -116,7 +116,7 @@ def register():
         db.session.commit()
 
         login_user(user)
-        flash('Registration successful!', 'success')
+        flash('Вы успешно зарегистрированны!', 'success')
         return redirect(url_for('index'))
 
     return render_template('register.html')
@@ -137,14 +137,14 @@ def login():
 
 
 @app.route('/logout')
-#@login_required
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('index'))
 
 
 @app.route('/create_poll', methods=['GET', 'POST'])
-#@login_required
+@login_required
 def create_poll():
     if request.method == 'POST':
         try:
@@ -161,13 +161,13 @@ def create_poll():
 
             for q_text, q_type, opts in zip(questions, types, options_list):
                 if not q_text.strip():
-                    raise ValueError("Question text cannot be empty")
+                    raise ValueError("Текст вопроса не может быть пуст")
 
                 options = None
                 if q_type in ['radio', 'checkbox']:
                     options = json.loads(opts)
                     if not isinstance(options, list):
-                        raise ValueError("Options must be a JSON array")
+                        raise ValueError("Некорректный формат вариантов ответа")
 
                 question = Question(
                     text=q_text.strip(),
@@ -178,7 +178,7 @@ def create_poll():
                 db.session.add(question)
 
             db.session.commit()
-            flash('Poll created successfully!', 'success')
+            flash('Опрос успешно создан!', 'success')
             return redirect(url_for('index'))
 
         except Exception as e:
@@ -195,7 +195,6 @@ def view_poll(poll_id):
     if request.method == 'POST':
         try:
             for question in poll.questions:
-                response = None
                 if question.type == 'checkbox':
                     response = ','.join(request.form.getlist(f'q_{question.id}'))
                 else:
@@ -211,7 +210,7 @@ def view_poll(poll_id):
                     db.session.add(answer)
 
             db.session.commit()
-            flash('Thank you for participating!', 'success')
+            flash('Спасибо за участие!', 'success')
             return redirect(url_for('index'))
 
         except Exception as e:
@@ -265,10 +264,6 @@ def poll_results(poll_id):
                            poll=poll,
                            answer_sessions=answer_sessions
                            )
-
-
-from io import StringIO  # Изменено с BytesIO на StringIO
-import csv
 
 
 @app.route('/export_csv/<int:poll_id>')
@@ -334,11 +329,6 @@ def export_csv(poll_id):
         as_attachment=True,
         download_name=f"{poll.title}_results.csv"
     )
-
-
-from io import BytesIO
-from openpyxl import Workbook
-from sqlalchemy import func
 
 
 @app.route('/export_excel/<int:poll_id>')

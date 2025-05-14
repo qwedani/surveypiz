@@ -116,16 +116,24 @@ $(document).ready(function() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'top'
+                        position: 'top',
+                        allign: "center",
+                        labels: {
+                            boxWidth: 12
+                        }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        display: {{ 'true' if question.type == 'radio' else 'false' }}
+                        display: {{ 'true' if question.type == 'radio' else 'false' }},
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit:5
+                        }
                     }
                 }
             }

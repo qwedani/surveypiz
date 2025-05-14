@@ -56,6 +56,30 @@ nav a {
     background: #45a049;
 }
 
+.delete-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.question-card {
+    position: relative;
+    margin: 15px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    cursor: move;
+}
+
 .poll-card {
     background: white;
     padding: 20px;
@@ -103,6 +127,7 @@ nav a {
 }
 
 .form-group input[type="text"],
+.form-group input[type="password"],
 .form-group textarea {
     width: 100%;
     padding: 8px;
@@ -115,4 +140,48 @@ nav a {
     width: 100%;
     padding: 8px;
     margin-top: 5px;
+}
+/* Основной контейнер для графиков */
+.charts {
+    display: flex;
+    flex-direction: column; /* Располагаем элементы в столбец */
+    align-items: center;    /* Центрирование по горизонтали */
+    gap: 30px;             /* Расстояние между графиками */
+    max-width: 800px;      /* Максимальная ширина контейнера */
+    margin: 0 auto;        /* Центрирование всего блока на странице */
+    padding: 20px 0;
+}
+
+/* Контейнер для каждого графика */
+.chart-container {
+    width: 100%;           /* Занимает всю ширину родителя */
+    max-width: 600px;      /* Фиксируем максимальную ширину */
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    padding: 20px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeIn 0.7s ease forwards;
+}
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Стили для canvas */
+.chart-container canvas {
+    width: 100%!important;
+    height: 300px!important; /* Фиксированная высота */
+}
+
+/* Текстовые ответы */
+.text-answers {
+    width: 100%;
+    max-width: 600px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
 }
