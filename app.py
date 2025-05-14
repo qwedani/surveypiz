@@ -267,92 +267,154 @@ def poll_results(poll_id):
                            )
 
 
+from io import StringIO  # Изменено с BytesIO на StringIO
+import csv
+
+
 @app.route('/export_csv/<int:poll_id>')
-#@login_required
+@login_required
 def export_csv(poll_id):
-    poll = Poll.query.get_or_404(poll_id)
+    poll = Poll.query.options(
+        joinedload(Poll.questions)
+    ).get_or_404(poll_id)
 
-    csv_buffer = BytesIO()
-    writer = csv.writer(csv_buffer)
+    csv_buffer = StringIO()
+    writer = csv.writer(csv_buffer, delimiter=',')
 
-    headers = ['User', 'Timestamp'] + [q.text for q in poll.questions]
+    # Заголовки
+    headers = ['Время прохождения', 'Пользователь'] + [q.text for q in poll.questions]
     writer.writerow(headers)
 
-    answers_data = {}
-    for answer in Answer.query.join(Question).filter(Question.poll_id == poll_id).all():
-        user_key = answer.user_id or 'anonymous'
-        if user_key not in answers_data:
-            answers_data[user_key] = {
-                'user': f"User {answer.user_id}" if answer.user_id else "Anonymous",
-                'timestamp': answer.timestamp,
-                'answers': {}
-            }
-        answers_data[user_key]['answers'][answer.question_id] = answer.content
+    # Группировка ответов по сессиям (user + timestamp)
+    sessions = db.session.query(
+        Answer.user_id,
+        Answer.timestamp,
+        func.group_concat(Answer.id).label('answer_ids')
+    ).filter(
+        Answer.poll_id == poll.id
+    ).group_by(
+        Answer.user_id, Answer.timestamp
+    ).order_by(
+        Answer.timestamp.desc()
+    ).all()
 
-    for data in answers_data.values():
+    # Сбор данных
+    for session in sessions:
+        # Получаем пользователя
+        user = User.query.get(session.user_id) if session.user_id else None
+        user_display = user.username if user else 'Anonymous'
+
+        # Получаем ответы для сессии
+        answer_ids = [int(id) for id in session.answer_ids.split(',')] if session.answer_ids else []
+        answers = Answer.query.filter(Answer.id.in_(answer_ids)).all()
+
+        # Формируем строку
         row = [
-            data['user'],
-            data['timestamp'].strftime('%Y-%m-%d %H:%M')
+            session.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            user_display
         ]
+
+        # Добавляем ответы в порядке вопросов
         for question in poll.questions:
-            row.append(data['answers'].get(question.id, ''))
+            answer = next(
+                (a.content for a in answers if a.question_id == question.id),
+                'N/A'  # Значение по умолчанию
+            )
+            row.append(answer)
+
         writer.writerow(row)
 
+    # Подготовка файла
     csv_buffer.seek(0)
+    binary_buffer = BytesIO(csv_buffer.getvalue().encode('utf-8-sig'))
+
     return send_file(
-        csv_buffer,
+        binary_buffer,
         mimetype='text/csv',
         as_attachment=True,
         download_name=f"{poll.title}_results.csv"
     )
 
+
+from io import BytesIO
+from openpyxl import Workbook
+from sqlalchemy import func
+
+
 @app.route('/export_excel/<int:poll_id>')
-#@login_required
+@login_required
 def export_excel(poll_id):
-    poll = Poll.query.get_or_404(poll_id)
+    poll = Poll.query.options(
+        joinedload(Poll.questions)
+    ).get_or_404(poll_id)
 
     if poll.user_id != current_user.id:
-        flash('Unauthorized', 'error')
+        flash('Доступ запрещен', 'error')
         return redirect(url_for('index'))
 
+    # Создаем Excel-документ
     wb = Workbook()
     ws = wb.active
-    ws.title = "Results"
+    ws.title = "Результаты"
 
-    # Заголовки (вопросы)
-    headers = ['Timestamp', 'User'] + [q.text for q in poll.questions]
+    # Заголовки
+    headers = ['Время прохождения', 'Пользователь'] + [q.text for q in poll.questions]
     ws.append(headers)
 
-    # Собираем данные по сессиям
-    for session in poll.responses:
-        # Создаем словарь ответов для текущей сессии
-        answers_dict = {a.question_id: a.response for a in session.answers}
+    # Группировка ответов по сессиям
+    sessions = db.session.query(
+        Answer.user_id,
+        Answer.timestamp,
+        func.group_concat(Answer.id).label('answer_ids')
+    ).filter(
+        Answer.poll_id == poll.id
+    ).group_by(
+        Answer.user_id, Answer.timestamp
+    ).order_by(
+        Answer.timestamp.desc()
+    ).all()
 
-        # Формируем строку с ответами
+    # Заполняем данные
+    for session in sessions:
+        # Получаем пользователя
+        user = User.query.get(session.user_id) if session.user_id else None
+        user_display = user.username if user else 'Anonymous'
+
+        # Получаем ответы для сессии
+        answer_ids = [int(id) for id in session.answer_ids.split(',')] if session.answer_ids else []
+        answers = Answer.query.filter(Answer.id.in_(answer_ids)).all()
+
+        # Формируем строку
         row = [
-            session.timestamp,
-            f"User #{session.user_id}" if session.user_id else "Anonymous"
+            session.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            user_display
         ]
 
-        # Добавляем ответы в правильном порядке вопросов
+        # Добавляем ответы в порядке вопросов
         for question in poll.questions:
-            row.append(answers_dict.get(question.id, ''))
+            answer = next(
+                (a.content for a in answers if a.question_id == question.id),
+                'N/A'  # Значение по умолчанию
+            )
+            row.append(answer)
 
         ws.append(row)
 
     # Настраиваем ширину столбцов
-    for column in ws.columns:
+    for col in ws.columns:
         max_length = 0
-        column_letter = column[0].column_letter
-        for cell in column:
+        column = col[0].column_letter
+        for cell in col:
             try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
+                value_len = len(str(cell.value))
+                if value_len > max_length:
+                    max_length = value_len
             except:
                 pass
         adjusted_width = (max_length + 2) * 1.2
-        ws.column_dimensions[column_letter].width = adjusted_width
+        ws.column_dimensions[column].width = adjusted_width
 
+    # Сохраняем в буфер
     excel_buffer = BytesIO()
     wb.save(excel_buffer)
     excel_buffer.seek(0)

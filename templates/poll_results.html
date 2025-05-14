@@ -6,8 +6,17 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="results-container">
-    <h1 class="page-title">{{ poll.title }} Results</h1>
+    <h1 class="page-title">{{ poll.title }} Результаты</h1>
 
+    <!-- Кнопки экспорта -->
+    <div class="export-buttons">
+        <a href="{{ url_for('export_csv', poll_id=poll.id) }}" class="btn btn-export">
+            <i class="fas fa-file-csv"></i> CSV
+        </a>
+        <a href="{{ url_for('export_excel', poll_id=poll.id) }}" class="btn btn-export">
+            <i class="fas fa-file-excel"></i> Excel
+        </a>
+    </div>
     <!-- Таблица выше графиков -->
     <div class="table-responsive">
         <table id="resultsTable" class="results-table">

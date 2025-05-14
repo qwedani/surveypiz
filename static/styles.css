@@ -20,7 +20,26 @@ nav a {
     color: #333;
     font-weight: 500;
 }
+/* Стили для кнопок */
+.btn-export {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 10px 5px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background 0.3s;
+}
 
+.btn-export:hover {
+    background: #45a049;
+    color: white;
+}
+
+.fas {
+    margin-right: 5px;
+}
 .btn {
     display: inline-block;
     padding: 8px 16px;
