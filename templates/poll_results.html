@@ -13,22 +13,21 @@
         <table id="resultsTable" class="results-table">
             <thead>
                 <tr>
-                    <th>Timestamp</th>
-                    <th>User</th>
+                    <th>Время прохождения</th>
+                    <th>Пользователь</th>
                     {% for question in poll.questions %}
                     <th>{{ question.text }}</th>
                     {% endfor %}
                 </tr>
             </thead>
             <tbody>
-                {% for answer in poll.answers %}
+                {% for session in answer_sessions %}
                 <tr>
-                    <td>{{ answers.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                    <td>{{ answers.user_id.username if answers.user_id else 'Anonymous' }}</td>
+                    <td>{{ session.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ session.user.username if session.user else 'Anonymous' }}</td>
                     {% for question in poll.questions %}
                     <td>
-                        {% set answer = poll.answers|selectattr('question_id', 'equalto', question.id)|first %}
-                        {{ answers.content if answer else 'N/A' }}
+                        {{ session.answers.get(question.id, 'N/A') }}
                     </td>
                     {% endfor %}
                 </tr>
@@ -40,11 +39,23 @@
     <!-- Графики ниже таблицы -->
     <div class="charts">
         <h2 class="charts-title">Визуализация ответов</h2>
-        {% for question in questions %}
-        {% if question.type != 'text' %}
+        {% for questions in poll.questions %}
+        {% if questions.type != 'text' %}
         <div class="chart-container">
-            <h3 class="chart-title">{{ question.text }}</h3>
-            <canvas id="chart-{{ question.id }}"></canvas>
+            <h3 class="chart-title">{{ questions.text }}</h3>
+            <canvas id="chart-{{ questions.id }}"></canvas>
+        </div>
+            {% else %}
+        <!-- Блок для текстовых ответов -->
+        <div class="text-answers">
+            <h3 class="chart-title">{{ questions.text }}</h3>
+            <ul>
+                {% for answer in questions.answers %}
+                <li>{{ answer.content }}</li>
+                {% else %}
+                <li>Нет текстовых ответов</li>
+                {% endfor %}
+            </ul>
         </div>
         {% endif %}
         {% endfor %}
@@ -64,54 +75,53 @@ $(document).ready(function() {
     $('#resultsTable').DataTable({
         paging: true,
         pageLength: 10,
-        order: [[0, 'desc']]
+        order: [[0, 'desc']],
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/ru.json'
+        }
     });
 
     // Создание графиков
-    {% for question in questions %}
-    {% if question.type != 'text' %}
-    const ctx{{ question.id }} = document.getElementById('chart-{{ question.id }}');
-    new Chart(ctx{{ question.id }}, {
-        type: 'bar',
-        data: {
-            labels: {{ question_labels[question.id]|safe }},
-            datasets: [{
-                label: 'Количество ответов',
-                data: {{ question_data[question.id]|safe }},
-                backgroundColor: colorPalette,
-                borderColor: '#fff',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        font: { size: 12 }
-                    }
-                }
+    {% for question in poll.questions if question.type != "text" %}
+    (function() {
+        const ctx = document.getElementById('chart-{{ question.id }}');
+        const options = {{ question.options|from_json|tojson }};
+        const answers = {{ question.answers|map(attribute='content')|list|tojson }};
+
+        // Подсчет количества ответов
+        const counts = options.map(option =>
+            answers.filter(answer => answer.includes(option)).length
+        );
+
+        new Chart(ctx, {
+            type: '{{ "bar" if question.type == "radio" else "pie" }}',
+            data: {
+                labels: options,
+                datasets: [{
+                    label: 'Количество ответов+',
+                    data: counts,
+                    backgroundColor: colorPalette,
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
                         display: true,
-                        text: 'Количество ответов'
+                        position: 'top'
                     }
                 },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Варианты ответов'
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        display: {{ 'true' if question.type == 'radio' else 'false' }}
                     }
                 }
             }
-        }
-    });
-    {% endif %}
+        });
+    })();
     {% endfor %}
 });
 </script>
