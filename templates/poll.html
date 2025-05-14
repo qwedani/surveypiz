@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="poll-container">
+    <h1 class="poll-title">{{ poll.title }}</h1>
+
+    <form method="POST" class="poll-form">
+        {% for question in poll.questions %}
+        <div class="question-card">
+            <div class="question-header">
+                <h3 class="question-text">{{ question.text }}</h3>
+                {% if question.comment %}
+                <p class="question-comment">{{ question.comment }}</p>
+                {% endif %}
+            </div>
+
+            <div class="question-body">
+                {% if question.type == 'text' %}
+                <input type="text"
+                       name="q_{{ question.id }}"
+                       class="text-answer"
+                       placeholder="Введите ваш ответ">
+
+                {% elif question.type == 'radio' %}
+                <div class="options-group">
+                    {% for option in question.options|from_json %}
+                    <label class="option-item">
+                        <input type="radio"
+                               name="q_{{ question.id }}"
+                               value="{{ option }}">
+                        <span class="option-text">{{ option }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {% elif question.type == 'checkbox' %}
+                <div class="options-group">
+                    {% for option in question.options|from_json %}
+                    <label class="option-item">
+                        <input type="checkbox"
+                               name="q_{{ question.id }}"
+                               value="{{ option }}">
+                        <span class="option-text">{{ option }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="no-questions">
+            <p>В этом опросе пока нет вопросов.</p>
+        </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit" class="submit-btn">Отправить ответы</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

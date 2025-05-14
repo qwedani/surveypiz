@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="results-container">
+    <h1 class="page-title">{{ poll.title }} Results</h1>
+
+    <!-- Таблица выше графиков -->
+    <div class="table-responsive">
+        <table id="resultsTable" class="results-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    {% for question in poll.questions %}
+                    <th>{{ question.text }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for answer in poll.answers %}
+                <tr>
+                    <td>{{ answers.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ answers.user_id.username if answers.user_id else 'Anonymous' }}</td>
+                    {% for question in poll.questions %}
+                    <td>
+                        {% set answer = poll.answers|selectattr('question_id', 'equalto', question.id)|first %}
+                        {{ answers.content if answer else 'N/A' }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Графики ниже таблицы -->
+    <div class="charts">
+        <h2 class="charts-title">Визуализация ответов</h2>
+        {% for question in questions %}
+        {% if question.type != 'text' %}
+        <div class="chart-container">
+            <h3 class="chart-title">{{ question.text }}</h3>
+            <canvas id="chart-{{ question.id }}"></canvas>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+// Цветовая палитра для графиков
+const colorPalette = [
+    '#4A90E2', '#50E3C2', '#E3507A',
+    '#F5A623', '#BD10E0', '#7ED321',
+    '#9013FE', '#F8E71C', '#417505'
+];
+
+$(document).ready(function() {
+    // Инициализация таблицы
+    $('#resultsTable').DataTable({
+        paging: true,
+        pageLength: 10,
+        order: [[0, 'desc']]
+    });
+
+    // Создание графиков
+    {% for question in questions %}
+    {% if question.type != 'text' %}
+    const ctx{{ question.id }} = document.getElementById('chart-{{ question.id }}');
+    new Chart(ctx{{ question.id }}, {
+        type: 'bar',
+        data: {
+            labels: {{ question_labels[question.id]|safe }},
+            datasets: [{
+                label: 'Количество ответов',
+                data: {{ question_data[question.id]|safe }},
+                backgroundColor: colorPalette,
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: { size: 12 }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Количество ответов'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Варианты ответов'
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+    {% endfor %}
+});
+</script>
+{% endblock %}

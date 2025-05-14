@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="poll-editor">
+    <h2>Создание нового опроса</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label>Название опроса</label>
+            <input type="text" name="title" required>
+        </div>
+
+        <div id="questions-container">
+            <div class="question-card">
+                <div class="question-header">
+                    <textarea name="question[]" placeholder="Текст вопроса" required></textarea>
+                    <select name="type[]">
+                        <option value="text">Текстовый вопрос</option>
+                        <option value="radio">Единичный выбор</option>
+                        <option value="checkbox">Множественный выбор</option>
+                    </select>
+                </div>
+                <div class="options-container" style="display: none;">
+                    <input type="text" placeholder='Введите варианты в формате JSON: ["Вариант1", "Вариант2"]'
+                           name="options[]" class="options-input">
+                </div>
+            </div>
+        </div>
+
+        <button type="button" onclick="addQuestion()" class="btn">Добавить вопрос</button>
+        <button type="submit" class="btn">Создать опрос</button>
+    </form>
+</div>
+
+<script>
+function addQuestion() {
+    const newQuestion = `
+    <div class="question-card">
+        <div class="question-header">
+            <textarea name="question[]" placeholder="Текст вопроса" required></textarea>
+            <select name="type[]">
+                <option value="text">Текстовый вопрос</option>
+                <option value="radio">Единичный выбор</option>
+                <option value="checkbox">Множественный выбор</option>
+            </select>
+        </div>
+        <div class="options-container" style="display: none;">
+            <input type="text" placeholder='Введите варианты в формате JSON: ["Вариант1", "Вариант2"]'
+                   name="options[]" class="options-input">
+        </div>
+    </div>`;
+    document.getElementById('questions-container').insertAdjacentHTML('beforeend', newQuestion);
+}
+
+// Обработчик изменений типа вопроса
+document.getElementById('questions-container').addEventListener('change', function(e) {
+    if (e.target.matches('select[name="type[]"]')) {
+        const questionCard = e.target.closest('.question-card');
+        const optionsContainer = questionCard.querySelector('.options-container');
+        optionsContainer.style.display = ['radio', 'checkbox'].includes(e.target.value)
+            ? 'block'
+            : 'none';
+    }
+});
+
+// Инициализация при загрузке
+document.querySelectorAll('select[name="type[]"]').forEach(select => {
+    select.dispatchEvent(new Event('change'));
+});
+</script>
+{% endblock %}
