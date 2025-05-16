@@ -5,6 +5,7 @@
 <div class="poll-editor">
     <h2>Создание нового опроса</h2>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label>Название опроса</label>
             <input type="text" name="title" required>
