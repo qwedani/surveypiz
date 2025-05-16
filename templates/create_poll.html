@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-<!-- Добавьте Sortable.js -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <div class="poll-editor">
@@ -15,7 +14,7 @@
             <div class="question-card">
                 <div class="question-header">
                     <button type="button" class="delete-btn" onclick="removeQuestion(this)">×</button>
-                    <textarea name="question[]" placeholder="Текст вопроса" required></textarea>
+                    <textarea class="question-textarea" name="question[]" placeholder="Текст вопроса" required></textarea>
                     <select name="type[]">
                         <option value="text">Текстовый вопрос</option>
                         <option value="radio">Единичный выбор</option>
@@ -35,13 +34,25 @@
 </div>
 
 <script>
+// Функция для авто-высоты textarea
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+// Инициализация авто-высоты для всех textarea
+document.querySelectorAll('.question-textarea').forEach(textarea => {
+    textarea.addEventListener('input', () => autoResize(textarea));
+    autoResize(textarea); // Инициализация при загрузке
+});
+
 // Добавление вопроса
 function addQuestion() {
     const newQuestion = `
     <div class="question-card">
         <div class="question-header">
             <button type="button" class="delete-btn" onclick="removeQuestion(this)">×</button>
-            <textarea name="question[]" placeholder="Текст вопроса" required></textarea>
+            <textarea class="question-textarea" name="question[]" placeholder="Текст вопроса" required></textarea>
             <select name="type[]">
                 <option value="text">Текстовый вопрос</option>
                 <option value="radio">Единичный выбор</option>
@@ -53,7 +64,14 @@ function addQuestion() {
                    name="options[]" class="options-input">
         </div>
     </div>`;
-    document.getElementById('questions-container').insertAdjacentHTML('beforeend', newQuestion);
+
+    const container = document.getElementById('questions-container');
+    container.insertAdjacentHTML('beforeend', newQuestion);
+
+    // Инициализация авто-высоты для нового поля
+    const newTextarea = container.lastElementChild.querySelector('.question-textarea');
+    newTextarea.addEventListener('input', () => autoResize(newTextarea));
+    autoResize(newTextarea);
 }
 
 // Удаление вопроса

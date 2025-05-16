@@ -72,12 +72,38 @@ nav a {
 
 .question-card {
     position: relative;
-    margin: 15px 0;
-    padding: 15px;
+    margin: 20px 0;
+    padding: 20px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #fff;
     cursor: move;
+}
+
+.question-textarea {
+    width: 96%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    resize: none; /* Запрещаем ручное изменение размера */
+    min-height: 60px; /* Минимальная высота */
+    font-size: 16px;
+    margin: 10px 0;
+    overflow-y: hidden; /* Скрываем вертикальный скролл */
+    transition: all 0.3s;
+
+.question-textarea:focus {
+    border-color: #4A90E2;
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);
+}
+
+/* Стили для подсказки */
+.format-hint {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
 }
 
 .poll-card {
@@ -95,12 +121,6 @@ nav a {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.question-card {
-    margin-bottom: 20px;
-    padding: 20px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-}
 
 .options-container {
     margin-top: 10px;
@@ -184,4 +204,4 @@ nav a {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
-}
+}}
