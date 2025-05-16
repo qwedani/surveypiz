@@ -21,42 +21,58 @@ nav a {
     font-weight: 500;
 }
 /* Стили для кнопок */
-.btn-export {
-    display: inline-block;
+.btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 10px 20px;
-    margin: 10px 5px;
-    background: #4CAF50;
-    color: white;
-    border-radius: 5px;
-    text-decoration: none;
-    transition: background 0.3s;
-}
-
-.btn-export:hover {
-    background: #45a049;
-    color: white;
-}
-
-.fas {
-    margin-right: 5px;
-}
-.btn {
-    display: inline-block;
-    padding: 8px 16px;
-    background: #4CAF50;
-    color: white;
-    border: none;
     border-radius: 4px;
-    cursor: pointer;
     text-decoration: none;
-    transition: background 0.3s;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    margin: 2px; /* Чтобы не ломать вёрстку при обводке */
 }
 
-.btn:hover {
-    background: #45a049;
+/* Цвета для разных типов кнопок */
+.btn {
+    background: #4CAF50;
+    color: white;
 }
 
-.delete-btn {
+.btn-export {
+    background: #2196F3;
+    color: white;
+}
+
+/* Стиль для кнопки удаления */
+.btn-delete-poll {
+    background: #ff4444;
+    color: white;
+}
+
+/* Ховер-эффекты */
+.btn:hover{
+    opacity: 0.9;
+    background: #3e8e41;
+}
+.btn-export:hover {
+    opacity: 0.9;
+    background: #3a80b1;
+}
+.btn-delete-poll:hover {
+    opacity: 0.9;
+    background: #cc0000;
+}
+/* Для формы удаления */
+.inline-form {
+    display: inline-block;
+    margin: 0;
+}
+
+.delete-question-btn {
     position: absolute;
     right: 10px;
     top: 10px;
@@ -70,48 +86,23 @@ nav a {
     font-size: 16px;
 }
 
-.question-card {
-    position: relative;
-    margin: 20px 0;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #fff;
-    cursor: move;
-}
-
-.question-textarea {
-    width: 96%;
-    padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    resize: none; /* Запрещаем ручное изменение размера */
-    min-height: 60px; /* Минимальная высота */
-    font-size: 16px;
-    margin: 10px 0;
-    overflow-y: hidden; /* Скрываем вертикальный скролл */
-    transition: all 0.3s;
-
-.question-textarea:focus {
-    border-color: #4A90E2;
-    outline: none;
-    box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);
-}
-
-/* Стили для подсказки */
-.format-hint {
-    display: block;
-    color: #666;
-    font-size: 12px;
-    margin-top: 5px;
-}
-
 .poll-card {
+    position: relative;
     background: white;
     padding: 20px;
     margin-bottom: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.poll-actions {
+    display: flex;
+    margin-top: 15px;
+    gap: 10px;
+}
+
+.poll-actions .inline-form{
+    margin-left: auto; /* Автоматический отступ слева сдвигает кнопку вправо */
 }
 
 .poll-editor {
@@ -204,4 +195,33 @@ nav a {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 8px;
-}}
+}
+
+.question-card {
+    position: relative;
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    cursor: move;
+}
+
+.question-textarea {
+    width: 96%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    resize: none; /* Запрещаем ручное изменение размера */
+    min-height: 60px; /* Минимальная высота */
+    font-size: 16px;
+    margin: 10px 0;
+    overflow-y: hidden; /* Скрываем вертикальный скролл */
+    transition: all 0.3s;
+}
+
+.question-textarea:focus {
+    border-color: #4A90E2;
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);
+}

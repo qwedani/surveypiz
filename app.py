@@ -9,6 +9,9 @@ import json
 from io import BytesIO,StringIO
 import csv
 from openpyxl import Workbook
+from flask_wtf.csrf import CSRFProtect
+
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -19,6 +22,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+csrf = CSRFProtect(app)
 
 # Модели
 class User(db.Model, UserMixin):
@@ -219,6 +223,12 @@ def view_poll(poll_id):
 
     return render_template('poll.html', poll=poll)
 
+@app.route('/my_polls')
+@login_required
+def my_polls():
+    user_polls = Poll.query.filter_by(user_id=current_user.id).order_by(Poll.id.desc()).all()
+    return render_template('my_polls.html', polls=user_polls)
+
 
 @app.route('/results/<int:poll_id>')
 @login_required
@@ -229,7 +239,7 @@ def poll_results(poll_id):
     ).get_or_404(poll_id)
 
     if poll.user_id != current_user.id:
-        flash('Access denied', 'error')
+        flash('Доступ запрещен', 'error')
         return redirect(url_for('index'))
 
     # Используем group_concat для SQLite вместо array_agg
@@ -415,6 +425,18 @@ def export_excel(poll_id):
         as_attachment=True,
         download_name=f"{poll.title}_results.xlsx"
     )
+
+@app.route('/delete_poll/<int:poll_id>', methods=['POST'])
+@login_required
+def delete_poll(poll_id):
+    poll = Poll.query.get_or_404(poll_id)
+    if poll.user_id != current_user.id:
+        flash('Доступ запрещен', 'error')
+        return redirect(url_for('index'))
+    db.session.delete(poll)
+    db.session.commit()
+    flash('Опрос удален', 'success')
+    return redirect(url_for('my_polls'))
 
 if __name__ == '__main__':
     app.run(debug=True)
