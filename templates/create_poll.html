@@ -8,25 +8,11 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label>Название опроса</label>
-            <input type="text" name="title" required>
+            <input type="text" name="title" placeholder="Введите название опроса" required>
         </div>
 
         <div id="questions-container">
-            <div class="question-card">
-                <div class="question-header">
-                    <button type="button" class="delete-question-btn" onclick="removeQuestion(this)">×</button>
-                    <textarea class="question-textarea" name="question[]" placeholder="Текст вопроса" required></textarea>
-                    <select name="type[]">
-                        <option value="text">Текстовый вопрос</option>
-                        <option value="radio">Единичный выбор</option>
-                        <option value="checkbox">Множественный выбор</option>
-                    </select>
-                </div>
-                <div class="options-container" style="display: none;">
-                    <input type="text" placeholder='Введите варианты в формате JSON: ["Вариант1", "Вариант2"]'
-                           name="options[]" class="options-input">
-                </div>
-            </div>
+
         </div>
 
         <button type="button" onclick="addQuestion()" class="btn">Добавить вопрос</button>
@@ -52,7 +38,7 @@ function addQuestion() {
     const newQuestion = `
     <div class="question-card">
         <div class="question-header">
-            <button type="button" class="delete-btn" onclick="removeQuestion(this)">×</button>
+            <button type="button" class="delete-question-btn" onclick="removeQuestion(this)">×</button>
             <textarea class="question-textarea" name="question[]" placeholder="Текст вопроса" required></textarea>
             <select name="type[]">
                 <option value="text">Текстовый вопрос</option>
@@ -61,8 +47,9 @@ function addQuestion() {
             </select>
         </div>
         <div class="options-container" style="display: none;">
-            <input type="text" placeholder='Введите варианты в формате JSON: ["Вариант1", "Вариант2"]'
-                   name="options[]" class="options-input">
+            <div class="options-list"></div>
+            <button type="button" class="btn add-option-btn" onclick="addOption(this)">Добавить вариант</button>
+            <input type="hidden" name="options[]" class="options-json">
         </div>
     </div>`;
 
@@ -75,6 +62,34 @@ function addQuestion() {
     autoResize(newTextarea);
 }
 
+// Добавление варианта
+function addOption(button) {
+    const optionsList = button.parentElement.querySelector('.options-list');
+    const newOption = document.createElement('div');
+    newOption.className = 'option';
+    newOption.innerHTML = `
+        <input type="text" class="option-input" placeholder="Введите вариант">
+        <button type="button" class="delete-option-btn" onclick="removeOption(this)">×</button>
+    `;
+    optionsList.appendChild(newOption);
+    updateOptionsJson(button.closest('.question-card'));
+}
+
+// Удаление варианта
+function removeOption(button) {
+    const option = button.closest('.option');
+    option.remove();
+    updateOptionsJson(button.closest('.question-card'));
+}
+
+// Обновление JSON
+function updateOptionsJson(questionCard) {
+    const inputs = questionCard.querySelectorAll('.option-input');
+    const options = Array.from(inputs).map(input => input.value.trim());
+    const jsonInput = questionCard.querySelector('.options-json');
+    jsonInput.value = JSON.stringify(options);
+}
+
 // Удаление вопроса
 function removeQuestion(button) {
     const questionCard = button.closest('.question-card');
@@ -83,6 +98,7 @@ function removeQuestion(button) {
 
 // Drag and Drop
 document.addEventListener('DOMContentLoaded', function() {
+    addQuestion();
     new Sortable(document.getElementById('questions-container'), {
         animation: 150,
         handle: '.question-card',
@@ -104,6 +120,12 @@ document.getElementById('questions-container').addEventListener('change', functi
 // Инициализация при загрузке
 document.querySelectorAll('select[name="type[]"]').forEach(select => {
     select.dispatchEvent(new Event('change'));
+});
+// Инициализация обработчиков
+document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('option-input')) {
+        updateOptionsJson(e.target.closest('.question-card'));
+    }
 });
 </script>
 {% endblock %}

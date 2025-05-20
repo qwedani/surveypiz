@@ -4,6 +4,7 @@
     <h1 class="poll-title">{{ poll.title }}</h1>
 
     <form method="POST" class="poll-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% for question in poll.questions %}
         <div class="question-card">
             <div class="question-header">
