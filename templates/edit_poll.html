@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Подключаем Sortable.js для drag-and-drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<div class="poll-editor">
+    <h2>Редактирование опроса</h2>
+    <form method="POST">
+        <!-- CSRF-токен для безопасности -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Поле для названия опроса -->
+        <div class="form-group">
+            <label for="title">Название опроса</label>
+            <input type="text" id="title" name="title" value="{{ poll.title }}" required>
+        </div>
+
+        <!-- Контейнер для вопросов -->
+        <div id="questions-container">
+            {% for question in questions %}
+            <div class="question-card" data-id="{{ question.id }}">
+                <!-- Скрытое поле для ID существующего вопроса -->
+                <input type="hidden" name="question_id[]" value="{{ question.id }}">
+                <div class="question-header">
+                    <!-- Кнопка удаления вопроса -->
+                    <button type="button" class="delete-question-btn" onclick="removeQuestion(this)">×</button>
+                    <!-- Поле для текста вопроса -->
+                    <textarea class="question-textarea" name="question[]" placeholder="Текст вопроса" required>{{ question.text }}</textarea>
+                    <!-- Выбор типа вопроса -->
+                    <select name="type[]">
+                        <option value="text" {% if question.type == 'text' %}selected{% endif %}>Текстовый вопрос</option>
+                        <option value="radio" {% if question.type == 'radio' %}selected{% endif %}>Единичный выбор</option>
+                        <option value="checkbox" {% if question.type == 'checkbox' %}selected{% endif %}>Множественный выбор</option>
+                    </select>
+                </div>
+                <!-- Контейнер для опций -->
+                <div class="options-container" style="display: {% if question.type in ['radio', 'checkbox'] %}block{% else %}none{% endif %};">
+                    <div class="options-list">
+                        {% for option in question.options_list %}
+                        <div class="option">
+                            <input type="text" class="option-input" value="{{ option }}">
+                            <button type="button" class="delete-option-btn" onclick="removeOption(this)">×</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn add-option-btn" onclick="addOption(this)">Добавить вариант</button>
+                    <input type="hidden" name="options[]" class="options-json" value='{{ question.options_list | tojson }}'>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Кнопки для добавления вопроса и сохранения -->
+        <button type="button" onclick="addQuestion()" class="btn">Добавить вопрос</button>
+        <button type="submit" class="btn">Сохранить изменения</button>
+    </form>
+</div>
+
+<!-- Модальное окно -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <p class="modal-text">На данный вопрос уже могли дать ответы.<br>Вы точно хотите удалить его?<br>Перед удалением советуем скачать полученные ответы.</p>
+        <div class="modal-buttons">
+            <div class="modal-actions-left">
+                <a href="#" id="exportExcelLink" class="btn btn-export">Excel</a>
+                <a href="#" id="exportCsvLink" class="btn btn-export">CSV</a>
+            </div>
+            <div class="modal-actions-right">
+                <button class="btn cancel-btn" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-delete-poll confirm-btn" onclick="confirmDelete()">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// Переменные для хранения текущего вопроса
+let currentQuestionCard = null;
+
+// Функция для авто-высоты textarea
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+// Инициализация авто-высоты для всех textarea
+document.querySelectorAll('.question-textarea').forEach(textarea => {
+    textarea.addEventListener('input', () => autoResize(textarea));
+    autoResize(textarea);
+});
+
+// Добавление вопроса
+function addQuestion() {
+    const newQuestion = `
+    <div class="question-card" data-id="new">
+        <div class="question-header">
+            <button type="button" class="delete-question-btn" onclick="removeQuestion(this)">×</button>
+            <textarea class="question-textarea" name="question[]" placeholder="Текст вопроса" required></textarea>
+            <select name="type[]">
+                <option value="text">Текстовый вопрос</option>
+                <option value="radio">Единичный выбор</option>
+                <option value="checkbox">Множественный выбор</option>
+            </select>
+        </div>
+        <div class="options-container" style="display: none;">
+            <div class="options-list"></div>
+            <button type="button" class="btn add-option-btn" onclick="addOption(this)">Добавить вариант</button>
+            <input type="hidden" name="options[]" class="options-json" value="[]">
+        </div>
+    </div>`;
+
+    const container = document.getElementById('questions-container');
+    container.insertAdjacentHTML('beforeend', newQuestion);
+
+    const newTextarea = container.lastElementChild.querySelector('.question-textarea');
+    newTextarea.addEventListener('input', () => autoResize(newTextarea));
+    autoResize(newTextarea);
+
+    updateOrder(); // Обновляем порядок после добавления нового вопроса
+}
+
+// Добавление варианта
+function addOption(button) {
+    const optionsList = button.parentElement.querySelector('.options-list');
+    const newOption = document.createElement('div');
+    newOption.className = 'option';
+    newOption.innerHTML = `
+        <input type="text" class="option-input" placeholder="Введите вариант">
+        <button type="button" class="delete-option-btn" onclick="removeOption(this)">×</button>
+    `;
+    optionsList.appendChild(newOption);
+    updateOptionsJson(button.closest('.question-card'));
+}
+
+// Удаление варианта
+function removeOption(button) {
+    const option = button.closest('.option');
+    const questionCard = button.closest('.question-card');
+    option.remove();
+    updateOptionsJson(questionCard);
+}
+
+// Обновление JSON для опций
+function updateOptionsJson(questionCard) {
+    const inputs = questionCard.querySelectorAll('.option-input');
+    const options = Array.from(inputs)
+        .map(input => input.value.trim())
+        .filter(value => value.length > 0); // Фильтруем пустые значения
+    const jsonInput = questionCard.querySelector('.options-json');
+    if (jsonInput) {
+        jsonInput.value = JSON.stringify(options); // Перезаписываем только актуальные варианты
+    } else {
+        console.error('Не удалось найти options-json');
+    }
+}
+
+// Удаление вопроса с уведомлением для существующих вопросов
+function removeQuestion(button) {
+    const questionCard = button.closest('.question-card');
+    const questionId = questionCard.dataset.id;
+
+    // Показываем уведомление только для существующих вопросов (не новых)
+    if (questionId !== "new") {
+        currentQuestionCard = questionCard; // Сохраняем текущий вопрос
+        const pollId = {{ poll.id }}; // Получаем poll_id из шаблона
+        // Устанавливаем ссылки для экспорта
+        document.getElementById('exportExcelLink').href = `/export_excel/${pollId}`;
+        document.getElementById('exportCsvLink').href = `/export_csv/${pollId}`;
+        // Показываем модальное окно
+        document.getElementById('deleteModal').style.display = 'block';
+    } else {
+        questionCard.remove();
+        updateOrder(); // Обновляем порядок после удаления
+    }
+}
+
+// Закрытие модального окна
+function closeModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    currentQuestionCard = null;
+}
+
+// Подтверждение удаления
+function confirmDelete() {
+    if (currentQuestionCard) {
+        currentQuestionCard.remove();
+        updateOrder(); // Обновляем порядок после удаления
+    }
+    closeModal();
+}
+
+// Обновление порядка вопросов
+function updateOrder() {
+    const container = document.getElementById('questions-container');
+    const orderInputs = container.querySelectorAll('.question-card');
+    const orderValues = [];
+    let newQuestionIndex = 0;
+
+    orderInputs.forEach(card => {
+        const id = card.dataset.id;
+        if (id === "new") {
+            // Для новых вопросов используем временный идентификатор
+            orderValues.push(`new_${newQuestionIndex}`);
+            newQuestionIndex++;
+        } else {
+            orderValues.push(id);
+        }
+    });
+
+    // Создаем или обновляем скрытое поле для порядка
+    let orderField = document.querySelector('input[name="order[]"]');
+    if (!orderField) {
+        orderField = document.createElement('input');
+        orderField.type = 'hidden';
+        orderField.name = 'order[]';
+        container.parentElement.insertBefore(orderField, container.nextSibling);
+    }
+    orderField.value = JSON.stringify(orderValues);
+}
+
+// Drag and Drop
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('questions-container');
+    new Sortable(container, {
+        animation: 150,
+        handle: '.question-card',
+        ghostClass: 'dragging-ghost',
+        onEnd: function(event) {
+            updateOrder(); // Обновляем порядок после перетаскивания
+        }
+    });
+    updateOrder(); // Инициализируем порядок при загрузке
+});
+
+// Обработчик изменений типа вопроса
+document.getElementById('questions-container').addEventListener('change', function(e) {
+    if (e.target.matches('select[name="type[]"]')) {
+        const questionCard = e.target.closest('.question-card');
+        const optionsContainer = questionCard.querySelector('.options-container');
+        const jsonInput = questionCard.querySelector('.options-json');
+
+        // Показываем/скрываем контейнер опций
+        optionsContainer.style.display = ['radio', 'checkbox'].includes(e.target.value)
+            ? 'block'
+            : 'none';
+
+        // Если тип изменился на text, очищаем options-json
+        if (e.target.value === 'text' && jsonInput) {
+            jsonInput.value = '[]';
+        }
+    }
+});
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+
+// Инициализация при загрузке
+document.querySelectorAll('select[name="type[]"]').forEach(select => {
+    select.dispatchEvent(new Event('change'));
+});
+
+document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('option-input')) {
+        updateOptionsJson(e.target.closest('.question-card'));
+    }
+});
+</script>
+
+{% endblock %}
