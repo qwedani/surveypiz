@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Доступные опросы</h1>
+<!-- Обёртка для заголовка и поиска -->
+<div class="header-search-container">
+    <h1>Доступные опросы</h1>
+    <!-- Форма поиска -->
+    <form method="GET" action="{{ url_for('index') }}" class="search-form">
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Поиск по названию опроса/автору" class="form-group">
+        <button type="submit" class="search-form btn">Найти</button>
+        <a href="{{ url_for('index') }}" class="search-form btn">Сбросить</a>
+    </form>
+</div>
+
 <div class="polls-list">
     {% for poll in polls %}
     <div class="poll-card">
@@ -15,4 +25,27 @@
     <p>Нет доступных опросов.</p>
     {% endfor %}
 </div>
+
+<!-- Блок пагинации -->
+{% if polls %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('index', page=pagination.prev_num, search=search_query) }}" class="btn">Предыдущая</a>
+    {% endif %}
+    {% for num in pagination.iter_pages() %}
+        {% if num %}
+            {% if num == pagination.page %}
+                <span class="btn current-page">{{ num }}</span>
+            {% else %}
+                <a href="{{ url_for('index', page=num, search=search_query) }}" class="btn">{{ num }}</a>
+            {% endif %}
+        {% else %}
+            <span class="btn ellipsis">...</span>
+        {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+        <a href="{{ url_for('index', page=pagination.next_num, search=search_query) }}" class="btn">Следующая</a>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}
