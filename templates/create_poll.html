@@ -12,7 +12,7 @@
         </div>
 
         <div id="questions-container">
-
+            <!-- Начальный вопрос добавляется при загрузке -->
         </div>
 
         <button type="button" onclick="addQuestion()" class="btn">Добавить вопрос</button>
@@ -36,7 +36,7 @@ document.querySelectorAll('.question-textarea').forEach(textarea => {
 // Добавление вопроса
 function addQuestion() {
     const newQuestion = `
-    <div class="question-card">
+    <div class="question-card" data-id="new">
         <div class="question-header">
             <button type="button" class="delete-question-btn" onclick="removeQuestion(this)">×</button>
             <textarea class="question-textarea" name="question[]" placeholder="Текст вопроса" required></textarea>
@@ -49,14 +49,13 @@ function addQuestion() {
         <div class="options-container" style="display: none;">
             <div class="options-list"></div>
             <button type="button" class="btn add-option-btn" onclick="addOption(this)">Добавить вариант</button>
-            <input type="hidden" name="options[]" class="options-json">
+            <input type="hidden" name="options[]" class="options-json" value="[]">
         </div>
     </div>`;
 
     const container = document.getElementById('questions-container');
     container.insertAdjacentHTML('beforeend', newQuestion);
 
-    // Инициализация авто-высоты для нового поля
     const newTextarea = container.lastElementChild.querySelector('.question-textarea');
     newTextarea.addEventListener('input', () => autoResize(newTextarea));
     autoResize(newTextarea);
@@ -78,16 +77,23 @@ function addOption(button) {
 // Удаление варианта
 function removeOption(button) {
     const option = button.closest('.option');
+    const questionCard = button.closest('.question-card');
     option.remove();
-    updateOptionsJson(button.closest('.question-card'));
+    updateOptionsJson(questionCard);
 }
 
 // Обновление JSON
 function updateOptionsJson(questionCard) {
     const inputs = questionCard.querySelectorAll('.option-input');
-    const options = Array.from(inputs).map(input => input.value.trim());
+    const options = Array.from(inputs)
+        .map(input => input.value.trim())
+        .filter(value => value.length > 0); // Фильтруем пустые значения
     const jsonInput = questionCard.querySelector('.options-json');
-    jsonInput.value = JSON.stringify(options);
+    if (jsonInput) {
+        jsonInput.value = JSON.stringify(options); // Перезаписываем только актуальные варианты
+    } else {
+        console.error('Не удалось найти options-json');
+    }
 }
 
 // Удаление вопроса
@@ -96,17 +102,40 @@ function removeQuestion(button) {
     questionCard.remove();
 }
 
-// Drag and Drop
+// Drag and Drop и обновление порядка
 document.addEventListener('DOMContentLoaded', function() {
-    addQuestion();
-    new Sortable(document.getElementById('questions-container'), {
+    addQuestion(); // Добавляем начальный вопрос
+    const container = document.getElementById('questions-container');
+    new Sortable(container, {
         animation: 150,
         handle: '.question-card',
-        ghostClass: 'dragging-ghost'
+        ghostClass: 'dragging-ghost',
+        onEnd: function(event) {
+            updateOrder(); // Обновляем порядок после перетаскивания
+        }
     });
 });
 
-// Обработчик изменений типа вопроса (делегирование событий)
+// Обновление порядка вопросов
+function updateOrder() {
+    const container = document.getElementById('questions-container');
+    const orderInputs = container.querySelectorAll('.question-card');
+    const orderValues = [];
+    orderInputs.forEach(card => {
+        orderValues.push(card.dataset.id); // Используем data-id для отслеживания порядка
+    });
+    // Создаем скрытые поля для передачи порядка
+    let orderField = document.querySelector('input[name="order[]"]');
+    if (!orderField) {
+        orderField = document.createElement('input');
+        orderField.type = 'hidden';
+        orderField.name = 'order[]';
+        container.parentElement.insertBefore(orderField, container.nextSibling);
+    }
+    orderField.value = JSON.stringify(orderValues);
+}
+
+// Обработчик изменений типа вопроса
 document.getElementById('questions-container').addEventListener('change', function(e) {
     if (e.target.matches('select[name="type[]"]')) {
         const questionCard = e.target.closest('.question-card');
@@ -121,7 +150,6 @@ document.getElementById('questions-container').addEventListener('change', functi
 document.querySelectorAll('select[name="type[]"]').forEach(select => {
     select.dispatchEvent(new Event('change'));
 });
-// Инициализация обработчиков
 document.addEventListener('input', (e) => {
     if (e.target.classList.contains('option-input')) {
         updateOptionsJson(e.target.closest('.question-card'));
