@@ -17,6 +17,7 @@
             <i class="fas fa-file-excel"></i> Excel
         </a>
     </div>
+
     <!-- Таблица выше графиков -->
     <div class="table-responsive">
         <table id="resultsTable" class="results-table">
@@ -24,7 +25,7 @@
                 <tr>
                     <th>Время прохождения</th>
                     <th>Пользователь</th>
-                    {% for question in poll.questions %}
+                    {% for question in questions %}
                     <th>{{ question.text }}</th>
                     {% endfor %}
                 </tr>
@@ -34,9 +35,9 @@
                 <tr>
                     <td>{{ session.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                     <td>{{ session.user.username if session.user else 'Anonymous' }}</td>
-                    {% for question in poll.questions %}
+                    {% for question in questions %}
                     <td>
-                        {{ session.answers.get(question.id, 'N/A') }}
+                        {{ session.answers.get(question.id, 'N/A') | join(', ') if session.answers.get(question.id) is iterable and session.answers.get(question.id) is not string else session.answers.get(question.id, 'N/A') }}
                     </td>
                     {% endfor %}
                 </tr>
@@ -48,18 +49,18 @@
     <!-- Графики ниже таблицы -->
     <div class="charts">
         <h2 class="charts-title">Визуализация ответов</h2>
-        {% for questions in poll.questions %}
-        {% if questions.type != 'text' %}
+        {% for question in questions %}
+        {% if question.type != 'text' %}
         <div class="chart-container">
-            <h3 class="chart-title">{{ questions.text }}</h3>
-            <canvas id="chart-{{ questions.id }}"></canvas>
+            <h3 class="chart-title">{{ question.text }}</h3>
+            <canvas id="chart-{{ question.id }}"></canvas>
         </div>
-            {% else %}
+        {% else %}
         <!-- Блок для текстовых ответов -->
         <div class="text-answers">
-            <h3 class="chart-title">{{ questions.text }}</h3>
+            <h3 class="chart-title">{{ question.text }}</h3>
             <ul>
-                {% for answer in questions.answers %}
+                {% for answer in question.answers %}
                 <li>{{ answer.content }}</li>
                 {% else %}
                 <li>Нет текстовых ответов</li>
@@ -91,24 +92,31 @@ $(document).ready(function() {
     });
 
     // Создание графиков
-    {% for question in poll.questions if question.type != "text" %}
+    {% for question in questions if question.type != "text" %}
     (function() {
         const ctx = document.getElementById('chart-{{ question.id }}');
         const options = {{ question.options|from_json|tojson }};
         const answers = {{ question.answers|map(attribute='content')|list|tojson }};
 
         // Подсчет количества ответов
-        const counts = options.map(option =>
-            answers.filter(answer => answer.includes(option)).length
-        );
+        const counts = {};
+        answers.forEach(answer => {
+            if (answer) {
+                const values = answer.split(',').map(val => val.trim());
+                values.forEach(val => {
+                    counts[val] = (counts[val] || 0) + 1;
+                });
+            }
+        });
+        const finalCounts = options.map(option => counts[option] || 0);
 
         new Chart(ctx, {
             type: '{{ "bar" if question.type == "radio" else "pie" }}',
             data: {
                 labels: options,
                 datasets: [{
-                    label: 'Количество ответов+',
-                    data: counts,
+                    label: 'Количество ответов',
+                    data: finalCounts,
                     backgroundColor: colorPalette,
                     borderColor: '#fff',
                     borderWidth: 1
@@ -120,7 +128,7 @@ $(document).ready(function() {
                 plugins: {
                     legend: {
                         position: 'top',
-                        allign: "center",
+                        align: 'center', // Исправлено с "allign" на "align"
                         labels: {
                             boxWidth: 12
                         }
@@ -132,7 +140,7 @@ $(document).ready(function() {
                         display: {{ 'true' if question.type == 'radio' else 'false' }},
                         ticks: {
                             autoSkip: true,
-                            maxTicksLimit:5
+                            maxTicksLimit: 5
                         }
                     }
                 }
