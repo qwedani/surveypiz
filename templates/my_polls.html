@@ -14,16 +14,15 @@
         {% for poll in polls %}
         <div class="poll-card">
             <h3>{{ poll.title }}</h3>
-            <!-- Заглушка для редактирования -->
             <div class="poll-actions">
                 <a href="{{ url_for('poll_results', poll_id=poll.id) }}" class="btn">Результаты</a>
-                <a href="#" class="btn">Редактировать</a>
-                <form action="{{ url_for('delete_poll', poll_id=poll.id) }}" method="POST" class="inline-form">
+                <a href="{{ url_for('edit_poll', poll_id=poll.id) }}" class="btn">Редактировать</a>
+                <form action="{{ url_for('delete_poll', poll_id=poll.id) }}" method="POST" class="inline-form" id="deleteForm-{{ poll.id }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button
-                            type="submit"
-                            class="btn btn-delete-poll"
-                            onclick="return confirm('Вы уверены что хотите удалть опрос?')"
+                        type="button"
+                        class="btn btn-delete-poll"
+                        onclick="showDeleteModal({{ poll.id }})"
                     >
                         Удалить опрос
                     </button>
@@ -33,4 +32,61 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- Модальное окно -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <p class="modal-text">На данный опрос уже могли дать ответы.<br>Вы точно хотите удалить его?<br>Перед удалением советуем скачать полученные ответы.</p>
+        <div class="modal-buttons">
+            <div class="modal-actions-left">
+                <a href="#" id="exportExcelLink" class="btn btn-export">Excel</a>
+                <a href="#" id="exportCsvLink" class="btn btn-export">CSV</a>
+            </div>
+            <div class="modal-actions-right">
+                <button class="btn cancel-btn" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-delete-poll confirm-btn" onclick="confirmDelete()">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// Переменные для хранения текущего опроса
+let currentPollId = null;
+
+// Показать модальное окно
+function showDeleteModal(pollId) {
+    currentPollId = pollId;
+    // Устанавливаем ссылки для экспорта
+    document.getElementById('exportExcelLink').href = `/export_excel/${pollId}`;
+    document.getElementById('exportCsvLink').href = `/export_csv/${pollId}`;
+    // Показываем модальное окно
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+// Закрытие модального окна
+function closeModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    currentPollId = null;
+}
+
+// Подтверждение удаления
+function confirmDelete() {
+    if (currentPollId) {
+        const form = document.getElementById(`deleteForm-${currentPollId}`);
+        if (form) {
+            form.submit(); // Отправляем форму для удаления
+        }
+    }
+    closeModal();
+}
+
+// Закрытие модального окна по клику на фон
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+</script>
 {% endblock %}
